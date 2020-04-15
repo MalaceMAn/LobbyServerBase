@@ -19,10 +19,10 @@ namespace LobbyClient
         public UDP udp;
 
         //Client connection status and attempt details.
-        public bool isConnected;
+        public bool isConnected = false;
         private int connectionAttempt = 0;
-        private int maxConnectionAttempts = 3;
-        private float attemptOffset = 5f;
+        private int maxConnectionAttempts = 5;
+        private float attemptOffset = 0.5f;
         private IEnumerator coroutine;
 
         //Packet dictionary
@@ -51,36 +51,46 @@ namespace LobbyClient
             tcp = new TCP();
             udp = new UDP();
             InitializeClientData();
-            coroutine = LoginAttempt();
-            StartCoroutine(coroutine);
-            tcp.Connect();
+            AttemptToConnect();
+            //tcp.Connect();
         }
-        private IEnumerator LoginAttempt()
+        public void AttemptToConnect()
         {
-            while (!isConnected)
+            if (!isConnected)
             {
-                if(connectionAttempt++ <= maxConnectionAttempts)
+                connectionAttempt++;
+                if (connectionAttempt <= maxConnectionAttempts)
                 {
+                    coroutine = ConnectionAttempt();
+                    StartCoroutine(coroutine);                
+                    Debug.Log($"Attempting to connect. Attempt # {connectionAttempt} at {Time.time}");
+                    
                     tcp.Connect();
-                    Debug.Log($"Attempting Connection: {connectionAttempt} at: {Time.time}");
-                    yield return new WaitForSeconds(attemptOffset);
                 }
                 else
                 {
-                    Debug.Log("Sever is not responding.");
-                    isConnected = true;
+                    Debug.Log("Connection attempts exceeded.");
                 }
 
-                
             }
-            Debug.Log($"Connection successful on attempt: {connectionAttempt}");
+            else
+            {
+                Debug.Log($"Connected on attempt: {connectionAttempt}");
+            }
         }
-        public void ConnectToServer()
+        private IEnumerator ConnectionAttempt()
         {
-            //NEVER CALLED NOT RUNNING LOOK AT START
-            InitializeClientData();
-
-            tcp.Connect();
+            yield return new WaitForSeconds(attemptOffset);
+            if (isConnected)
+            {
+                Debug.Log($"Connected on attempt: {connectionAttempt}");
+            }
+            else
+            {
+                
+                AttemptToConnect();
+            }
+  
         }
 
         public class TCP
